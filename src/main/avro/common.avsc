@@ -1,0 +1,9 @@
+{"namespace": "com.ddv.test.avro",
+ "type": "record",
+ "name": "CommonDetails",
+ "fields": [
+     {"name": "name", "type": "string"},
+     {"name": "favorite_number",  "type": ["int", "null"]},
+     {"name": "favorite_color", "type": ["string", "null"]}
+ ]
+}

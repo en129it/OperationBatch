@@ -1,0 +1,8 @@
+{"namespace": "com.ddv.test.avro",
+ "type": "record",
+ "name": "SecurityTrade",
+ "fields": [
+     {"name": "securityname", "type": "string"},
+     {"name": "details",  "type": "com.ddv.test.avro.CommonDetails"}
+ ]
+}
