@@ -1,0 +1,68 @@
+create type t_number_table is table of number(19, 0);
+create type t_timestamp_table is table of date;
+
+create or replace package trade_cache as
+    function delete_trade(p_gateway_trade_id number, p_last_web_status_date timestamp, p_force_insert number) return number;
+    function delete_trades(p_gateway_trade_id t_number_table, p_last_web_status_date t_timestamp_table, p_force_insert t_number_table) return t_number_table;
+end trade_cache;
+
+
+create or replace package body trade_cache as
+    function delete_trade(p_gateway_trade_id number, p_last_web_status_date timestamp, p_force_insert number) return number is
+        trade_metadata txn_entered_status_cache%ROWTYPE;
+    begin
+        select * into trade_metadata from txn_entered_status_cache where gateway_trade_id = p_gateway_trade_id;
+        if (trade_metadata.entered_status = 'Y') then 
+            update txn_entered_status_cache set entered_status = 'N' where gateway_trade_id = p_gateway_trade_id;
+            return SQL%rowcount;
+        end if;
+        return 0;
+    exception when no_data_found then
+        if (p_force_insert = 1) then
+            insert into txn_entered_status_cache(gateway_trade_id, entered_status, last_web_status_date) values(p_gateway_trade_id, 'N', p_last_web_status_date);
+            return 1;
+        end if;
+        return 0;
+    end;
+
+    function delete_trades(p_gateway_trade_id t_number_table, p_last_web_status_date t_timestamp_table, p_force_insert t_number_table) return t_number_table is
+        rslt t_number_table;
+    begin
+        rslt := t_number_table();
+        rslt.extend(p_gateway_trade_id.COUNT);
+        for i in 1 .. p_gateway_trade_id.COUNT loop
+            rslt(i) := 1;
+        end loop;
+        return rslt;
+    end;
+end trade_cache;
+
+DECLARE
+  P_GATEWAY_TRADE_ID t_number_table := t_number_table(1234);
+  P_FORCE_INSERT t_number_table := t_number_table(1);
+  P_date t_timestamp_table := t_timestamp_table(sysdate);
+  v_Return t_number_table;
+BEGIN
+  v_Return := TRADE_CACHE.DELETE_TRADES( P_GATEWAY_TRADE_ID, P_date, P_FORCE_INSERT);
+  dbms_output.put_line(to_char(v_Return.COUNT));
+  for i in 1 .. v_Return.COUNT loop
+      dbms_output.put_line('>> ' || to_char(v_Return(i)));
+  end loop;
+END;
+
+
+DECLARE
+  P_GATEWAY_TRADE_ID NUMBER;
+  P_FORCE_INSERT number;
+  v_Return number;
+BEGIN
+  P_GATEWAY_TRADE_ID := 1234;
+  P_FORCE_INSERT := 1;
+
+  v_Return := TRADE_CACHE.DELETE_TRADE(
+    P_GATEWAY_TRADE_ID => P_GATEWAY_TRADE_ID,
+    p_last_web_status_date => sysdate,
+    P_FORCE_INSERT => P_FORCE_INSERT
+  );
+  dbms_output.put_line(to_char(v_Return));
+END;
